@@ -7,9 +7,10 @@ import dev.dharam.userauthservice.entity.Session;
 import dev.dharam.userauthservice.entity.SessionStatus;
 import dev.dharam.userauthservice.entity.User;
 import dev.dharam.userauthservice.exceptions.*;
+import dev.dharam.userauthservice.repositories.RoleRepository;
 import dev.dharam.userauthservice.repositories.SessionRepository;
 import dev.dharam.userauthservice.repositories.UserRepository;
-import org.apache.commons.lang3.RandomStringUtils;
+import io.jsonwebtoken.security.Jwks;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -24,12 +25,15 @@ public class AuthServiceImpl implements AuthService{
     private UserRepository userRepository;
     private BCryptPasswordEncoder bCryptPasswordEncoder;
     private final SessionRepository sessionRepository;
+    private RoleRepository roleRepository;
 
     @Autowired
     public AuthServiceImpl(UserRepository userRepository,
-                           SessionRepository sessionRepository) {
+                           SessionRepository sessionRepository,
+                           RoleRepository roleRepository) {
         this.userRepository = userRepository;
         this.bCryptPasswordEncoder = new BCryptPasswordEncoder();
+        this.roleRepository = roleRepository;
         this.sessionRepository = sessionRepository;
     }
 
@@ -43,6 +47,13 @@ public class AuthServiceImpl implements AuthService{
         user.setEmail(request.getEmail());
         user.setPassword(bCryptPasswordEncoder.encode(request.getPassword()));
         User savedUser = userRepository.save(user);
+        Set<Role> roles = new HashSet<>();
+        Role role = roleRepository.findByName("USER").orElseThrow(
+                ()->new RuntimeException("Unknown error")
+        );
+
+        roles.add(role);
+        user.setRoles(roles);
         return UserMapper.convertUserToUserResponseDto(savedUser);
     }
 
@@ -58,6 +69,7 @@ public class AuthServiceImpl implements AuthService{
 
 
         UserResponseDto responseDto = UserMapper.convertUserToUserResponseDto(user);
+
         return responseDto;
     }
 
@@ -76,25 +88,33 @@ public class AuthServiceImpl implements AuthService{
     }
 
     @Override
-    public ValidateTokenResponseDto validateToken(ValidateTokenRequestDto request) {
-        Session session = sessionRepository.findByToken( request.getToken()).orElseThrow(
-                ()->new InvalidTokenException("Invalid token!")
-        );
-
-        if(session.getExpiringAt().compareTo(Instant.now()) <=0){
-            session.setSessionStatus(SessionStatus.EXPIRED);
-            session = sessionRepository.save(session);
+    public Optional<ValidateTokenResponseDto> validateToken(ValidateTokenRequestDto request) {
+        Optional<Session> sessionOptional = sessionRepository.findByToken( request.getToken());
+        if(sessionOptional.isEmpty()){
+            Optional.empty();
         }
+        Session session = sessionOptional.get();
 
-        if(session.getSessionStatus().equals(SessionStatus.EXPIRED)){
-            throw new ExpiredTokenException("Session has been expired. Try LogIn again.!");
+        if (!session.getSessionStatus().equals(SessionStatus.ACTIVE)) {
+            return Optional.empty();
         }
+//        if(session.getExpiringAt().compareTo(Instant.now()) <=0){
+//            session.setSessionStatus(SessionStatus.EXPIRED);
+//            session = sessionRepository.save(session);
+//        }
+//
+//        if(session.getSessionStatus().equals(SessionStatus.EXPIRED)){
+//            throw new ExpiredTokenException("Session has been expired. Try LogIn again.!");
+//        }
+
+        User user = userRepository.findById(request.getUserId()).get();
+        UserResponseDto userResponseDto = UserMapper.convertUserToUserResponseDto(user);
+
 
         ValidateTokenResponseDto response = new ValidateTokenResponseDto();
         response.setSessionStatus(session.getSessionStatus());
-
-
-        return response;
+        response.setUserResponseDto(userResponseDto);
+        return Optional.of(response);
     }
 
     @Override

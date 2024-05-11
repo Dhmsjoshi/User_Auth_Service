@@ -10,6 +10,7 @@ import java.util.Set;
 @Getter
 @Setter
 public class ValidateTokenResponseDto {
+    private UserResponseDto userResponseDto;
     private SessionStatus sessionStatus;
 
 }

@@ -8,8 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/roles")
@@ -17,9 +18,16 @@ public class RoleController {
     @Autowired
     private RoleService roleService;
 
-    public ResponseEntity<CreateRoleResponseDto> createRole(CreateRoleRequestDto request){
+    @PostMapping()
+    public ResponseEntity<CreateRoleResponseDto> createRole(@RequestBody CreateRoleRequestDto  request){
         CreateRoleResponseDto createdRole = roleService.createRole(request);
         return new ResponseEntity<>(createdRole, HttpStatus.OK);
+    }
+
+    @PostMapping("/{id}")
+    public ResponseEntity<String> setUserRoleAdmin(@PathVariable("id") UUID userId){
+        String res = roleService.setUserRoleAdmin( userId);
+        return new ResponseEntity<>(res, HttpStatus.OK);
     }
     
 }

@@ -1,9 +1,6 @@
 package dev.dharam.userauthservice.entity;
 
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
@@ -18,6 +15,7 @@ import java.util.UUID;
 public class BaseModel {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
+
     private UUID id;
     @CreationTimestamp
     private Instant createdAt;  // number of seconds/nanoseconds since 1 Jan, 1970 UTC

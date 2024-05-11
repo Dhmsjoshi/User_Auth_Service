@@ -2,6 +2,7 @@ package dev.dharam.userauthservice.controllers;
 
 import dev.dharam.userauthservice.Dtos.*;
 import dev.dharam.userauthservice.entity.Session;
+import dev.dharam.userauthservice.entity.SessionStatus;
 import dev.dharam.userauthservice.services.authService.AuthService;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/auth")
@@ -36,6 +38,7 @@ public class AuthController {
     public ResponseEntity<UserResponseDto> logIn(@RequestBody LogInRequestDto request){
         UserResponseDto savedUser = authService.logIn(request);
         String token = RandomStringUtils.randomAscii(20);
+
         //TODO:Update here to use JWT
         /*Paylod{
                 userId:
@@ -45,17 +48,17 @@ public class AuthController {
          */
 
 
-        Map<String, Object> claimsMap = new HashMap<>();
-        claimsMap.put("userId",savedUser.getId() );
-        claimsMap.put("email", savedUser.getEmail());
-        claimsMap.put("roles", savedUser.getRoles());
-        String jwt = Jwts.builder()
-                .claims(claimsMap)
-                .compact();
+//        Map<String, Object> claimsMap = new HashMap<>();
+//        claimsMap.put("userId",savedUser.getId() );
+//        claimsMap.put("email", savedUser.getEmail());
+//        claimsMap.put("roles", savedUser.getRoles());
+//        String jwt = Jwts.builder()
+//                .claims(claimsMap)
+//                .compact();
         Session savedSession = authService.createSession(token, savedUser.getId());
 
         MultiValueMapAdapter<String, String> headers = new MultiValueMapAdapter<>(new HashMap<>());
-        headers.add("AUTH_TOKEN", jwt);
+        headers.add("AUTH_TOKEN", token);
 
 
 
@@ -77,8 +80,17 @@ public class AuthController {
 
     @PostMapping("/validate")
     public ResponseEntity<ValidateTokenResponseDto> validateToken(@RequestBody ValidateTokenRequestDto request){
-        ValidateTokenResponseDto response = authService.validateToken(request);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        Optional<ValidateTokenResponseDto> response = authService.validateToken(request);
+        if(response.isEmpty()){
+            ValidateTokenResponseDto responseDto = new ValidateTokenResponseDto();
+            responseDto.setSessionStatus(SessionStatus.INVALID);
+            responseDto.setUserResponseDto(null);
+            return new ResponseEntity<>(responseDto, HttpStatus.OK);
+
+        }
+        ValidateTokenResponseDto tokenResponse = response.get();
+        tokenResponse.setSessionStatus(SessionStatus.ACTIVE);
+        return new ResponseEntity<>(tokenResponse, HttpStatus.OK);
     }
 
 

@@ -15,7 +15,7 @@ import java.util.UUID;
 public class UserResponseDto {
     private UUID id;
     private String email;
-    private Set<Role> roles;
+    private Set<CreateRoleResponseDto> roles;
 
 
 }
